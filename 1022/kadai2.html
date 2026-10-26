@@ -1,0 +1,208 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>課題2 AR - Clanker</title>
+
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.4.7/aframe/build/aframe-ar.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    #hud {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 999;
+      width: 220px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px #555;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    select, button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      margin-bottom: 8px;
+      font-size: 15px;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+    }
+
+    button {
+      background: #2677d8;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:active {
+      background: #15529c;
+    }
+
+    #status {
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .button-row button {
+      width: 50%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="hud">
+    <h3>Clanker AR 操作</h3>
+
+    <label for="animationSelect">アニメーション</label>
+    <select id="animationSelect">
+      <option value="">読み込み中...</option>
+    </select>
+
+    <div class="button-row">
+      <button id="enlargeButton">拡大 ＋</button>
+      <button id="shrinkButton">縮小 −</button>
+    </div>
+
+    <div class="button-row">
+      <button id="rotateButton">右回転 ↻</button>
+      <button id="reverseButton">左回転 ↺</button>
+    </div>
+
+    <p id="status">モデルを読み込んでいます...</p>
+  </div>
+
+  <a-scene
+    embedded
+    vr-mode-ui="enabled: false"
+    renderer="colorManagement: true"
+    arjs="sourceType: webcam; debugUIEnabled: false;">
+
+    <a-marker preset="hiro">
+
+      <a-entity
+        id="model"
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="0.5 0.5 0.5">
+
+        <a-entity
+          id="clanker"
+          gltf-model="url(Mech.glb)"
+          position="0 0 0">
+        </a-entity>
+
+      </a-entity>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <script>
+    const model = document.getElementById('model');
+    const clanker = document.getElementById('clanker');
+    const animationSelect = document.getElementById('animationSelect');
+    const status = document.getElementById('status');
+
+    let size = 0.5;
+    let angle = 0;
+
+    clanker.addEventListener('model-loaded', function () {
+      const mesh = clanker.getObject3D('mesh');
+      const animations = mesh && mesh.animations
+        ? mesh.animations
+        : [];
+
+      animationSelect.innerHTML = '';
+
+      if (animations.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'アニメーションなし';
+        animationSelect.appendChild(option);
+        status.textContent = 'モデル読み込み完了';
+        return;
+      }
+
+      animations.forEach(function (animation, index) {
+        const option = document.createElement('option');
+        option.value = animation.name;
+        option.textContent = animation.name;
+        animationSelect.appendChild(option);
+      });
+
+      animationSelect.selectedIndex = 0;
+      playAnimation(animationSelect.value);
+
+      status.textContent =
+        '読み込み完了：' + animations.length + '個のアニメーション';
+    });
+
+    clanker.addEventListener('model-error', function () {
+      status.textContent =
+        'モデルを読み込めません。ファイル名を確認してください。';
+    });
+
+    function playAnimation(name) {
+      if (!name) return;
+
+      clanker.setAttribute('animation-mixer', {
+        clip: name,
+        loop: 'repeat',
+        timeScale: 1
+      });
+
+      status.textContent = '再生中：' + name;
+    }
+
+    animationSelect.addEventListener('change', function () {
+      playAnimation(animationSelect.value);
+    });
+
+    document.getElementById('enlargeButton')
+      .addEventListener('click', function () {
+        size = Math.min(size * 1.2, 3);
+        model.setAttribute('scale', `${size} ${size} ${size}`);
+      });
+
+    document.getElementById('shrinkButton')
+      .addEventListener('click', function () {
+        size = Math.max(size / 1.2, 0.1);
+        model.setAttribute('scale', `${size} ${size} ${size}`);
+      });
+
+    document.getElementById('rotateButton')
+      .addEventListener('click', function () {
+        angle += 15;
+        model.setAttribute('rotation', `0 ${angle} 0`);
+      });
+
+    document.getElementById('reverseButton')
+      .addEventListener('click', function () {
+        angle -= 15;
+        model.setAttribute('rotation', `0 ${angle} 0`);
+      });
+  </script>
+</body>
+</html>
